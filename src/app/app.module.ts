@@ -11,6 +11,8 @@ import { DumbComponent } from './dumb/dumb.component';
 import { SmartComponent } from './smart/smart.component';
 import { ActiveDirective } from './directives/active.directive';
 import { DynamicComponent } from './dynamic/dynamic.component';
+import { VjsPlayerComponent } from './vjs-player/vjs-player.component';
+import { VideojsWavesurferComponent } from './videojs-wavesurfer/videojs-wavesurfer.component';
 
 @NgModule({
   declarations: [
@@ -23,6 +25,8 @@ import { DynamicComponent } from './dynamic/dynamic.component';
     SmartComponent,
     ActiveDirective,
     DynamicComponent,
+    VjsPlayerComponent,
+    VideojsWavesurferComponent,
   ],
   imports: [BrowserModule, AppRoutingModule, HttpClientModule],
   providers: [],

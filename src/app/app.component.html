@@ -1,4 +1,4 @@
-<div [ngStyle]="currentStyles">
+<!-- <div [ngStyle]="currentStyles">
   {{ title }}
 </div>
 
@@ -17,7 +17,17 @@
 <app-smart></app-smart>
 
 <button (click)="add()">Dynamically Add Component</button>  
-<!-- insert the dynamic components -->  
-<ng-container #container></ ng-container >  
+
+<ng-container #container></ ng-container >   -->
+
+<!-- <app-vjs-player
+  [options]="{
+    autoplay: true,
+    controls: true,
+    sources: [{ src: 'https://cdn.plyr.io/static/demo/View_From_A_Blue_Moon_Trailer-720p.mp4', type: 'video/mp4' }]
+  }"
+></app-vjs-player> -->
+
+<app-videojs-wavesurfer></app-videojs-wavesurfer>
 
 <router-outlet></router-outlet>
