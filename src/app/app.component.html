@@ -1,0 +1,23 @@
+<div [ngStyle]="currentStyles">
+  {{ title }}
+</div>
+
+<div [ngClass]="currentClasses">
+  {{ apiURL }}
+</div>
+
+
+<p appActive>Active !!</p>
+
+<button (click)="show = !show">toggle</button>
+
+<app-hello *ngIf="show"></app-hello>
+<app-parent></app-parent>
+<app-track-by></app-track-by>
+<app-smart></app-smart>
+
+<button (click)="add()">Dynamically Add Component</button>  
+<!-- insert the dynamic components -->  
+<ng-container #container></ ng-container >  
+
+<router-outlet></router-outlet>
