@@ -1,7 +1,11 @@
 import { Component, OnInit, OnDestroy, ElementRef } from '@angular/core';
-
+import { HttpClient } from '@angular/common/http';
 import videojs from 'video.js';
 import * as WaveSurfer from 'wavesurfer.js';
+
+import * as Wavesurfer from 'videojs-wavesurfer/dist/videojs.wavesurfer.js';
+
+import { annotations } from '../../assets/annotations.js';
 
 /*
 // Required imports when using videojs-wavesurfer 'live' mode with the microphone plugin
@@ -10,8 +14,13 @@ import * as MicrophonePlugin from 'wavesurfer.js/dist/plugin/wavesurfer.micropho
 WaveSurfer.microphone = MicrophonePlugin;
 */
 
-// Register videojs-wavesurfer plugin
-import * as Wavesurfer from 'videojs-wavesurfer/dist/videojs.wavesurfer.js';
+import * as RegionsPlugin from 'wavesurfer.js/dist/plugin/wavesurfer.regions.js';
+import * as MinimapPlugin from 'wavesurfer.js/dist/plugin/wavesurfer.minimap.js';
+import * as TimelinePlugin from 'wavesurfer.js/dist/plugin/wavesurfer.timeline.js';
+
+WaveSurfer.regions = RegionsPlugin;
+WaveSurfer.minimap = MinimapPlugin;
+WaveSurfer.timeline = TimelinePlugin;
 
 @Component({
   selector: 'app-videojs-wavesurfer',
@@ -19,20 +28,23 @@ import * as Wavesurfer from 'videojs-wavesurfer/dist/videojs.wavesurfer.js';
   styleUrls: ['./videojs-wavesurfer.component.css'],
 })
 export class VideojsWavesurferComponent implements OnInit, OnDestroy {
-
   // reference to the element itself: used to access events and methods
   private _elementRef: ElementRef;
 
   // index to create unique ID for component
   idx = 'clip1';
+  file = null;
+  tag = null;
 
   private config: any;
   private player: any;
   private plugin: any;
 
   // constructor initializes our declared vars
-  constructor(elementRef: ElementRef) {
+  constructor(elementRef: ElementRef, private http: HttpClient) {
     this.player = false;
+    this.file = false;
+    this.tag = false;
 
     // save reference to plugin (so it initializes)
     this.plugin = Wavesurfer;
@@ -54,11 +66,9 @@ export class VideojsWavesurferComponent implements OnInit, OnDestroy {
           'durationDisplay',
           'timeDivider',
           'currentTimeDisplay',
-          'progressControl',
-          'remainingTimeDisplay',
+          // 'progressControl',
           'playbackRateMenuButton',
-          'fullscreenToggle',
-          'ResolutionButton',
+          // 'fullscreenToggle',
         ],
       },
       plugins: {
@@ -67,10 +77,11 @@ export class VideojsWavesurferComponent implements OnInit, OnDestroy {
           backend: 'MediaElement',
           displayMilliseconds: true,
           debug: true,
-          waveColor: '#4A4A22',
+          waveColor: '#0100fd',
           progressColor: 'black',
-          cursorColor: 'black',
+          cursorColor: 'red',
           hideScrollbar: true,
+          plugins: [WaveSurfer.regions.create()],
         },
       },
     };
@@ -81,7 +92,7 @@ export class VideojsWavesurferComponent implements OnInit, OnDestroy {
   // after the component template itself has been rendered
   ngAfterViewInit() {
     // ID with which to access the template's audio element
-    
+
     let el = 'audio_' + this.idx;
 
     // setup the player via the unique element ID
@@ -98,16 +109,38 @@ export class VideojsWavesurferComponent implements OnInit, OnDestroy {
         WaveSurfer.VERSION;
       videojs.log(msg);
 
-      // load file
-      this.player.src({ src: 'assets/hal.wav', type: 'audio/wav' });
+      this.player.src({ src: 'assets/sample_3.wav' });
+    });
+
+    this.player.on('loadstart', () => {
+      console.log('mediainfo', this.player.toJSON());
     });
 
     this.player.on('waveReady', (event) => {
-      console.log('waveform is ready!');
-    });
+      this.player.wavesurfer().setupPlaybackEvents(true);
+      this.player.wavesurfer().surfer.enableDragSelection({
+        color: this.randomColor(0.1),
+      });
+      if (localStorage.regions) {
+        this.loadRegions(JSON.parse(localStorage.regions));
+      } else {
+        this.loadRegions(annotations);
+        this.saveRegions();
+      }
 
-    this.player.on('playbackFinish', (event) => {
-      console.log('playback finished.');
+      this.player.wavesurfer().surfer.on('region-click', (region, e) => {
+        e.stopPropagation();
+        // Play on click, loop on shift click
+        this.player.pause();
+        e.shiftKey ? region.playLoop() : region.play();
+      });
+
+      this.player.wavesurfer().surfer.on('region-play', function (region) {
+        region.once('out', function () {
+          this.player.wavesurfer().surfer.play(region.start);
+          this.player.wavesurfer().surfer.pause();
+        });
+      });
     });
 
     // error handling
@@ -119,14 +152,14 @@ export class VideojsWavesurferComponent implements OnInit, OnDestroy {
       console.error('device error:', this.player.deviceErrorCode);
     });
 
-    var myButton = this.player.controlBar.addChild('button', {}, 1);
-    var myButtonDom = myButton.el();
-    console.log(myButtonDom)
-    myButton.addClass('vjs-icon-square');
+    var stopButton = this.player.controlBar.addChild('button', {}, 1);
+    var stopButtonDom = stopButton.el();
+    stopButtonDom.innerHTML = '<i class="fas fa-stop"></i>';
 
-    myButtonDom.onclick = function () {
-      alert('Redirecting');
-      window.location.href = 'https://www.google.com';
+    stopButtonDom.onclick = () => {
+      const player = videojs('audio_clip1');
+      player.pause();
+      player.currentTime(0);
     };
   }
 
@@ -136,5 +169,39 @@ export class VideojsWavesurferComponent implements OnInit, OnDestroy {
       this.player.dispose();
       this.player = false;
     }
+  }
+
+  randomColor(alpha) {
+    return (
+      'rgba(' +
+      [
+        ~~(Math.random() * 255),
+        ~~(Math.random() * 255),
+        ~~(Math.random() * 255),
+        alpha || 1,
+      ] +
+      ')'
+    );
+  }
+
+  loadRegions(regions) {
+    regions.forEach((region) => {
+      region.color = this.randomColor(0.1);
+      this.player.wavesurfer().surfer.addRegion(region);
+    });
+  }
+
+  saveRegions() {
+    localStorage.regions = JSON.stringify(
+      Object.keys(this.player.wavesurfer().surfer.regions.list).map((id) => {
+        let region = this.player.wavesurfer().surfer.regions.list[id];
+        return {
+          start: region.start,
+          end: region.end,
+          attributes: region.attributes,
+          data: region.data,
+        };
+      })
+    );
   }
 }

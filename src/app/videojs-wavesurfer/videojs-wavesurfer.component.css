@@ -1,3 +1,9 @@
 #audio_clip1 {
-    background-color: #42f489;
+  background: rgb(225, 225, 225);
+  background: linear-gradient(
+    0deg,
+    rgba(225, 225, 225, 1) 0%,
+    rgba(126, 126, 143, 1) 50%,
+    rgba(225, 225, 225, 1) 100%
+  );
 }
